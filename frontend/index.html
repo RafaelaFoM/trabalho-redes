@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedra, Papel e Tesoura Online</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-900 text-gray-100 font-inter min-h-screen flex items-center justify-center p-4">
+    <div id="app" class="bg-gray-800 rounded-lg shadow-2xl p-8 max-w-2xl w-full flex flex-col items-center gap-6">
+        <h1 class="text-4xl font-bold text-blue-400 mb-4 animate-pulse">Pedra, Papel e Tesoura</h1>
+
+        <div v-if="step === 'enter_name'" class="w-full text-center">
+            <h2 class="text-2xl font-semibold mb-6">Bem-vindo(a)!</h2>
+            <div class="flex flex-col gap-3 max-w-sm mx-auto">
+                <input type="text" v-model="playerNameInput" @keyup.enter="submitName" placeholder="Digite seu nome de jogador"
+                       class="p-3 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center">
+                <button @click="submitName"
+                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
+                    Continuar
+                </button>
+                <p v-if="nameErrorMessage" class="text-red-500 mt-2">{{ nameErrorMessage }}</p>
+            </div>
+        </div>
+
+        <div v-if="step === 'menu'" class="w-full text-center">
+            <h2 class="text-2xl font-semibold mb-6">Olá, <span class="text-green-400">{{ playerName }}</span>!</h2>
+            <div class="flex flex-col md:flex-row gap-4 justify-center">
+                <button @click="createGame"
+                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center justify-center gap-2">
+                    <i class="fas fa-plus-circle"></i> Criar Novo Jogo
+                </button>
+                <div class="flex flex-col gap-2">
+                    <input type="text" v-model="joinGameId" placeholder="ID do Jogo"
+                           class="p-3 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button @click="joinGame"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center justify-center gap-2">
+                        <i class="fas fa-sign-in-alt"></i> Entrar no Jogo
+                    </button>
+                </div>
+            </div>
+            <p v-if="errorMessage" class="text-red-500 mt-4">{{ errorMessage }}</p>
+        </div>
+
+        <div v-if="step === 'in_game'" class="w-full text-center">
+            <h2 class="text-2xl font-semibold mb-4 text-blue-300">ID do Jogo: <span class="font-mono bg-gray-700 px-3 py-1 rounded-md">{{ gameId }}</span></h2>
+            
+            <div v-if="!gameStarted" class="text-center mt-6">
+                 <p class="text-xl text-yellow-400 font-semibold mb-4">Aguardando outro jogador...</p>
+                 <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-10 w-10 mx-auto"></div>
+                 <p class="text-sm text-gray-400 mt-2">Compartilhe o ID do jogo com um amigo!</p>
+            </div>
+
+            <div v-if="gameStarted && !gameOver" class="mt-6">
+                <div class="flex justify-around items-center mb-6 text-xl font-bold">
+                    <div class="flex flex-col items-center">
+                        <span class="text-green-400">{{ playerName }} (Você)</span>
+                        <span class="text-3xl">{{ scores[playerId] || 0 }}</span>
+                    </div>
+                    <span class="text-gray-400 mx-4">vs</span>
+                    <div class="flex flex-col items-center">
+                        <span class="text-red-400">{{ opponentName }}</span>
+                        <span class="text-3xl">{{ opponentScore }}</span>
+                    </div>
+                </div>
+
+                <p class="text-xl mb-4 text-purple-300">Rodada: {{ round }}</p>
+
+                <div v-if="!myChoice" class="mb-6">
+                    <h3 class="text-xl font-medium mb-4">Escolha sua jogada:</h3>
+                    <div class="flex justify-center gap-4">
+                        <button @click="makeChoice('pedra')" class="choice-button bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-lg shadow-md transition duration-200 ease-in-out transform hover:scale-105">
+                            <i class="far fa-hand-rock text-3xl"></i>
+                            <span class="block mt-2">Pedra</span>
+                        </button>
+                        <button @click="makeChoice('papel')" class="choice-button bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-lg shadow-md transition duration-200 ease-in-out transform hover:scale-105">
+                            <i class="far fa-hand-paper text-3xl"></i>
+                            <span class="block mt-2">Papel</span>
+                        </button>
+                        <button @click="makeChoice('tesoura')" class="choice-button bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-lg shadow-md transition duration-200 ease-in-out transform hover:scale-105">
+                            <i class="far fa-hand-scissors text-3xl"></i>
+                            <span class="block mt-2">Tesoura</span>
+                        </button>
+                    </div>
+                </div>
+                <div v-else class="mb-6">
+                     <p class="text-xl text-yellow-300 font-semibold">Sua escolha: <span class="capitalize">{{ myChoice }}</span></p>
+                     <p class="text-lg text-gray-400 mt-2">Aguardando a escolha do oponente...</p>
+                </div>
+                <div v-if="roundResult.message" class="bg-gray-700 p-4 rounded-lg mt-6 shadow-inner">
+                    <p class="text-xl font-semibold mb-2" :class="{'text-green-400': roundResult.winner_id === playerId, 'text-red-400': roundResult.winner_id && roundResult.winner_id !== playerId, 'text-blue-400': !roundResult.winner_id}">
+                        {{ roundResult.message }}
+                    </p>
+                    <div v-if="roundResult.player_choices" class="text-sm text-gray-300">
+                        <p>Você escolheu: <span class="capitalize">{{ roundResult.player_choices[playerId] }}</span></p>
+                        <p>{{ opponentName }} escolheu: <span class="capitalize">{{ opponentChoice }}</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="gameOver && winnerId" class="mt-8 text-center bg-gray-700 p-6 rounded-lg shadow-xl">
+                <h3 class="text-3xl font-bold mb-4" :class="{'text-green-500': winnerId === playerId, 'text-red-500': winnerId !== playerId}">
+                    {{ winnerId === playerId ? 'Você Venceu!' : 'Você Perdeu!' }}
+                </h3>
+                <p class="text-xl mb-4">Placar Final: {{ playerName }} {{ scores[playerId] }} - {{ opponentName }} {{ opponentScore }}</p>
+                <button @click="resetGame" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center justify-center gap-2 mx-auto">
+                    <i class="fas fa-redo"></i> Jogar Novamente
+                </button>
+            </div>
+            
+            <p v-if="playerDisconnectedMessage" class="text-red-500 mt-4 text-lg font-semibold animate-pulse">
+                {{ playerDisconnectedMessage }}
+            </p>
+        </div>
+
+        <div v-if="globalErrorMessage" class="fixed bottom-4 right-4 bg-red-700 text-white p-4 rounded-lg shadow-lg z-50">
+            {{ globalErrorMessage }}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <script src="frontend/app.js"></script>
+</body>
+</html>
